@@ -37,15 +37,18 @@ def _unset_raw_connection(original):
 
 def _get_result_or_execute_query(execute_query_func, cache,
                                  cache_key, table_cache_keys):
-    data = cache.get_many(table_cache_keys + [cache_key])
+    try:
+        data = cache.get_many(table_cache_keys + [cache_key])
 
-    new_table_cache_keys = set(table_cache_keys)
-    new_table_cache_keys.difference_update(data)
+        new_table_cache_keys = set(table_cache_keys)
+        new_table_cache_keys.difference_update(data)
 
-    if not new_table_cache_keys and cache_key in data:
-        timestamp, result = data.pop(cache_key)
-        if timestamp >= max(data.values()):
-            return result
+        if not new_table_cache_keys and cache_key in data:
+            timestamp, result = data.pop(cache_key)
+            if timestamp >= max(data.values()):
+                return result
+    except:
+        new_table_cache_keys = set([])
 
     result = execute_query_func()
     if result.__class__ not in ITERABLES and isinstance(result, Iterable):
@@ -54,7 +57,10 @@ def _get_result_or_execute_query(execute_query_func, cache,
     now = time()
     to_be_set = {k: now for k in new_table_cache_keys}
     to_be_set[cache_key] = (now, result)
-    cache.set_many(to_be_set, cachalot_settings.CACHALOT_TIMEOUT)
+    try:
+        cache.set_many(to_be_set, cachalot_settings.CACHALOT_TIMEOUT)
+    except:
+        pass
 
     return result
 
